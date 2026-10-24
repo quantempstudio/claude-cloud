@@ -1,0 +1,546 @@
+<title>العباقرة</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;700&display=swap">
+<style>
+/* Game-show host console: one dark stage, brass for what matters, teal for correct, coral for wrong */
+:root {
+  color-scheme: dark;
+  --stage: #10161f;
+  --panel: #18212d;
+  --line: #2a3747;
+  --ink: #e9edf2;
+  --dim: #8b98a8;
+  --brass: #e2b04a;
+  --good: #3fbf9f;
+  --bad: #e2645a;
+  --display: "Reem Kufi", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --body: "IBM Plex Sans Arabic", system-ui, sans-serif;
+}
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+body {
+  direction: rtl; background: var(--stage); color: var(--ink); font: 16px/1.6 var(--body);
+  padding-block: 20px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 860px; margin: 0 auto; display: grid; gap: 20px }
+h1 { font: 700 clamp(2.4rem, 8vw, 3.6rem)/1.1 var(--display); color: var(--brass); margin: 0; text-align: center }
+h1 small { display: block; font: 400 1rem var(--body); color: var(--dim); margin-top: 6px }
+h2 { font: 500 1.15rem var(--display); margin: 0 0 12px; color: var(--brass) }
+section.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px }
+.chips { display: flex; flex-wrap: wrap; gap: 8px }
+.chip input { position: absolute; opacity: 0 }
+.chip span {
+  display: inline-block; padding: 8px 16px; border: 1px solid var(--line); border-radius: 999px;
+  cursor: pointer; color: var(--dim); user-select: none;
+}
+.chip input:checked + span { background: var(--brass); color: var(--stage); border-color: var(--brass); font-weight: 700 }
+.chip input:focus-visible + span, button:focus-visible, input:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center }
+label.field { display: grid; gap: 4px; color: var(--dim); font-size: .9rem }
+input[type=number], input[type=text] {
+  background: var(--stage); color: var(--ink); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 10px; font: inherit; width: 100%;
+}
+input[type=number] { width: 90px }
+#names { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-top: 12px }
+button {
+  font: 500 1rem var(--body); cursor: pointer; border-radius: 10px; padding: 10px 18px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+}
+button:disabled { opacity: .35; cursor: not-allowed }
+button.go { background: var(--brass); color: var(--stage); border-color: var(--brass); font-weight: 700; font-size: 1.15rem; padding: 14px }
+.err { color: var(--bad); min-height: 1.5em; margin: 0 }
+
+/* scoreboard */
+#board { display: flex; flex-wrap: wrap; gap: 8px }
+.team { flex: 1 1 120px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-width: 0 }
+.team.on { border-color: var(--brass); box-shadow: 0 0 0 1px var(--brass) inset }
+.team b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.team .pts { font: 700 1.5rem var(--display); color: var(--brass); font-variant-numeric: tabular-nums }
+.team .fxleft { color: var(--dim); font-size: .8rem }
+
+/* question */
+.meta { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; color: var(--dim) }
+.tag { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: .85rem }
+#timer { font: 700 2rem var(--display); font-variant-numeric: tabular-nums; color: var(--ink); min-width: 3ch; text-align: center }
+#timer.low { color: var(--bad) }
+#qtext { font: 700 clamp(1.3rem, 4.5vw, 1.8rem)/1.5 var(--display); margin: 14px 0; text-wrap: balance }
+#opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px }
+#opts button { text-align: start; padding: 14px; font-size: 1.1rem; display: flex; gap: 10px; align-items: baseline }
+#opts button i { font: 700 1rem var(--display); color: var(--brass); font-style: normal }
+#opts button.peek { border-color: var(--good); border-style: dashed }
+#opts button.right { background: var(--good); color: var(--stage); border-color: var(--good) }
+#opts button.wrong { background: var(--bad); color: var(--stage); border-color: var(--bad) }
+#opts button.right i, #opts button.wrong i { color: inherit }
+#opts button.gone { visibility: hidden }
+#hint { background: var(--stage); border: 1px dashed var(--brass); border-radius: 10px; padding: 10px 14px; margin: 12px 0 0 }
+#fx { display: flex; flex-wrap: wrap; gap: 8px }
+#fx button { flex: 1 1 130px; font-size: .95rem }
+#fx button.armed { background: var(--brass); color: var(--stage) }
+.ctl { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between }
+#verdict { font: 700 1.2rem var(--display); margin: 0 }
+#verdict.good { color: var(--good) } #verdict.bad { color: var(--bad) }
+.ltr { direction: ltr; unicode-bidi: isolate; display: inline-block }
+
+/* end */
+#rank { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none }
+#rank li { display: flex; justify-content: space-between; padding: 12px 16px; border-radius: 10px; background: var(--stage); font-size: 1.2rem }
+#rank li:first-child { background: var(--brass); color: var(--stage); font-weight: 700 }
+@media (prefers-reduced-motion: no-preference) { #opts button { transition: background .2s } }
+</style>
+
+<main>
+  <h1>العباقرة<small>شاشة المقدّم: لا يراها إلا أنت</small></h1>
+
+  <!-- SETUP -->
+  <div id="setup" style="display:grid;gap:20px">
+    <section class="card">
+      <h2>الفئات</h2>
+      <div class="chips" id="cats"></div>
+    </section>
+    <section class="card">
+      <h2>الصعوبة</h2>
+      <div class="chips" id="diffs"></div>
+    </section>
+    <section class="card">
+      <h2>طريقة اللعب</h2>
+      <div class="chips">
+        <label class="chip"><input type="radio" name="mode" value="teams" checked><span>فرق</span></label>
+        <label class="chip"><input type="radio" name="mode" value="solo"><span>فردي</span></label>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <label class="field"><span id="countLbl">عدد الفرق</span><input type="number" id="count" min="1" max="8" value="2"></label>
+        <label class="field">عدد الأسئلة لكل <span id="perLbl">فريق</span><input type="number" id="per" min="1" max="30" value="5"></label>
+      </div>
+      <div id="names"></div>
+    </section>
+    <p class="err" id="setupErr"></p>
+    <button class="go" id="start">ابدأ اللعبة</button>
+  </div>
+
+  <!-- PLAY -->
+  <div id="play" hidden style="display:grid;gap:16px">
+    <div id="board"></div>
+    <section class="card">
+      <div class="meta">
+        <div class="row" style="gap:8px">
+          <span class="tag" id="roundTag"></span>
+          <span class="tag" id="catTag"></span>
+          <span class="tag" id="diffTag"></span>
+        </div>
+        <div id="timer">0</div>
+      </div>
+      <p style="margin:12px 0 0;color:var(--dim)">الدور على: <b id="turnName" style="color:var(--brass)"></b></p>
+      <div id="qtext"></div>
+      <div id="opts"></div>
+      <p id="hint" hidden></p>
+    </section>
+    <section class="card">
+      <h2>المؤثرات الخاصة</h2>
+      <div id="fx"></div>
+    </section>
+    <div class="ctl">
+      <div class="row">
+        <button id="peekBtn">إظهار الإجابة لي</button>
+        <button id="noAns">لم يجب / انتهى الوقت</button>
+      </div>
+      <p id="verdict"></p>
+      <button class="go" id="next" disabled>التالي</button>
+    </div>
+    <button id="quit" style="justify-self:start;color:var(--dim)">إنهاء اللعبة</button>
+  </div>
+
+  <!-- END -->
+  <section class="card" id="end" hidden>
+    <h2 id="endTitle">النتيجة النهائية</h2>
+    <ol id="rank"></ol>
+    <div class="row" style="margin-top:16px">
+      <button class="go" id="again">جولة جديدة بنفس الإعدادات</button>
+      <button id="reset">تغيير الإعدادات</button>
+    </div>
+  </section>
+</main>
+
+<script>
+const CATS = { med: 'طبي', geo: 'جغرافيا', hist: 'تاريخ', foot: 'كورة', maps: 'خرايط', sci: 'علوم', gen: 'ثقافة عامة', math: 'حسابات' };
+const DIFFS = { easy: 'سهل', common: 'متوسط', hard: 'صعب', extreme: 'خارق' };
+const PTS = { easy: 1, common: 2, hard: 3, extreme: 5 };
+const SECS = { easy: 20, common: 30, hard: 45, extreme: 60 };
+const FX = {
+  cut: 'حذف إجابتين',
+  hint: 'تلميح',
+  time: 'وقت إضافي +30',
+  swap: 'تبديل السؤال',
+  double: 'دبل النقاط',
+};
+
+// one question per line: question|answer|wrong|wrong|wrong|hint
+const RAW = {
+med: {
+easy: `كم عدد عظام جسم الإنسان البالغ؟|206|180|250|300|أكثر من 200 بقليل
+ما العضو الذي يضخ الدم في الجسم؟|القلب|الكبد|الرئة|الكلية|ينبض طول حياتك
+ما أكبر عضو في جسم الإنسان؟|الجلد|الكبد|الدماغ|الرئتان|يغطي الجسم كله
+أي فيتامين ينتجه الجسم عند التعرض للشمس؟|فيتامين د|فيتامين أ|فيتامين ج|فيتامين ب12|الحرف بعد ج
+كم عدد أسنان الإنسان البالغ مع ضروس العقل؟|32|28|30|36|مضاعف للرقم 16`,
+common: `ما الخلايا المسؤولة عن نقل الأكسجين في الدم؟|كريات الدم الحمراء|كريات الدم البيضاء|الصفائح الدموية|البلازما|لونها يعطي الدم لونه
+ما العضو الذي ينتج الأنسولين؟|البنكرياس|الكبد|المعدة|الغدة الدرقية|يقع خلف المعدة
+أصغر عظمة في جسم الإنسان توجد في؟|الأذن|الأنف|إصبع القدم|المعصم|لها علاقة بالسمع
+ما فصيلة الدم التي تُعد المعطي العام؟|O-|AB+|A+|B-|فصيلة سالبة
+ما العضو المسؤول عن تصفية الدم وإنتاج البول؟|الكليتان|الكبد|الطحال|المثانة|عضو مزدوج
+من مؤلف كتاب "القانون في الطب"؟|ابن سينا|الرازي|ابن النفيس|الزهراوي|لقبه الشيخ الرئيس`,
+hard: `ما الغدة التي تُسمى "سيدة الغدد"؟|الغدة النخامية|الغدة الدرقية|الغدة الكظرية|الغدة الصنوبرية|تقع أسفل الدماغ
+ما المرض الناتج عن نقص فيتامين C؟|الإسقربوط|الكساح|البري بري|البلاجرا|كان يصيب البحّارة
+من اكتشف البنسلين؟|ألكسندر فليمنج|لويس باستور|إدوارد جينر|روبرت كوخ|عالم اسكتلندي
+ما أطول عظمة في جسم الإنسان؟|عظمة الفخذ|عظمة الساق|عظمة العضد|عظمة الترقوة|في الرجل
+ما اسم العضلة التي تفصل الصدر عن البطن؟|الحجاب الحاجز|العضلة الصدرية|العضلة المستقيمة|العضلة الوربية|أهم عضلة في التنفس`,
+extreme: `ما الهرمون الذي تفرزه الغدة الصنوبرية لتنظيم النوم؟|الميلاتونين|السيروتونين|الدوبامين|الكورتيزول|يزيد في الظلام
+من أول من وصف الدورة الدموية الصغرى (الرئوية)؟|ابن النفيس|ابن سينا|ويليام هارفي|جالينوس|طبيب عربي من دمشق
+كم عدد أزواج الأعصاب القحفية؟|12|10|31|8|عدد أشهر السنة
+كم عدد أزواج الأعصاب الشوكية؟|31|12|33|24|أكثر من 30
+ما الخلايا التي تكوّن غلاف المايلين في الأعصاب الطرفية؟|خلايا شوان|الخلايا النجمية|الخلايا الدبقية الصغيرة|خلايا بوركنجي|اسم عالم ألماني`,
+},
+geo: {
+easy: `ما عاصمة مصر؟|القاهرة|الإسكندرية|الجيزة|أسوان|تقع على النيل
+ما أكبر محيط في العالم؟|المحيط الهادئ|المحيط الأطلسي|المحيط الهندي|المحيط المتجمد الشمالي|اسمه يوحي بالهدوء
+ما أطول نهر في العالم؟|النيل|الأمازون|المسيسيبي|اليانغتسي|في أفريقيا
+ما عاصمة السعودية؟|الرياض|جدة|مكة المكرمة|الدمام|في نجد
+ما أكبر قارة مساحة؟|آسيا|أفريقيا|أوروبا|أمريكا الشمالية|فيها الصين والهند`,
+common: `ما عاصمة أستراليا؟|كانبرا|سيدني|ملبورن|بيرث|ليست أشهر مدنها
+ما عاصمة كندا؟|أوتاوا|تورنتو|مونتريال|فانكوفر|تبدأ بحرف الألف
+ما أعلى قمة جبلية في العالم؟|إيفرست|K2|كليمنجارو|مون بلان|في جبال الهيمالايا
+ما أكبر صحراء حارة في العالم؟|الصحراء الكبرى|الربع الخالي|صحراء غوبي|صحراء كالاهاري|في شمال أفريقيا
+ما عاصمة المغرب؟|الرباط|الدار البيضاء|مراكش|فاس|على المحيط الأطلسي`,
+hard: `ما عاصمة كازاخستان؟|أستانا|ألماتي|طشقند|بيشكيك|تغيّر اسمها أكثر من مرة
+ما أصغر دولة في العالم مساحة؟|الفاتيكان|موناكو|سان مارينو|مالطا|داخل مدينة روما
+ما عاصمة نيجيريا؟|أبوجا|لاغوس|كانو|إبادان|ليست أكبر مدنها
+ما أعمق بحيرة في العالم؟|بايكال|فيكتوريا|تنجانيقا|سوبيريور|في سيبيريا
+ما النهر الذي يمر في بغداد؟|دجلة|الفرات|النيل|العاصي|اسمه من 4 حروف`,
+extreme: `ما عاصمة بوتان؟|تيمفو|كاتماندو|داكا|نايبيداو|تبدأ بحرف التاء
+ما عاصمة ميانمار الحالية؟|نايبيداو|يانغون|ماندالاي|فيينتيان|ليست يانغون
+ما أطول سلسلة جبال على اليابسة؟|الأنديز|الهيمالايا|جبال روكي|الألب|في أمريكا الجنوبية
+ما الدولة صاحبة أطول خط ساحلي في العالم؟|كندا|روسيا|أستراليا|إندونيسيا|في أمريكا الشمالية
+ما عاصمة بوركينا فاسو؟|واغادوغو|باماكو|نيامي|داكار|تبدأ بحرف الواو`,
+},
+hist: {
+easy: `من أول خليفة للمسلمين؟|أبو بكر الصديق|عمر بن الخطاب|عثمان بن عفان|علي بن أبي طالب|صاحب الرسول في الهجرة
+في أي عام بدأت الحرب العالمية الثانية؟|1939|1914|1945|1929|قبل الأربعينات بعام
+من أول إنسان مشى على سطح القمر؟|نيل أرمسترونغ|يوري غاغارين|باز ألدرين|مايكل كولينز|رائد أمريكي
+من بنى الأهرامات؟|المصريون القدماء|الرومان|الفرس|الإغريق|الفراعنة
+من فتح مكة؟|النبي محمد ﷺ|خالد بن الوليد|عمر بن الخطاب|أبو عبيدة بن الجراح|سنة 8 هـ`,
+common: `في أي عام انتهت الحرب العالمية الأولى؟|1918|1914|1920|1916|بعد بدايتها بأربع سنوات
+من القائد الذي فتح الأندلس؟|طارق بن زياد|صلاح الدين الأيوبي|خالد بن الوليد|عقبة بن نافع|سُمّي جبل باسمه
+بعد أي معركة استعاد صلاح الدين القدس؟|حطين|عين جالوت|اليرموك|القادسية|قرب طبريا
+من أول رئيس للولايات المتحدة؟|جورج واشنطن|أبراهام لينكولن|توماس جيفرسون|جون آدامز|سُمّيت العاصمة باسمه
+ما المدينة التي بناها العباسيون عاصمة لهم؟|بغداد|دمشق|القاهرة|قرطبة|مدينة السلام`,
+hard: `في أي عام فتح العثمانيون القسطنطينية؟|1453|1492|1299|1517|منتصف القرن الخامس عشر
+من السلطان العثماني الملقب بالقانوني؟|سليمان الأول|محمد الفاتح|سليم الأول|عبد الحميد الثاني|اسم نبي
+في أي عام سقطت غرناطة؟|1492|1453|1236|1609|نفس عام وصول كولومبوس لأمريكا
+معركة عين جالوت كانت بين المماليك و؟|المغول|الصليبيين|العثمانيين|الفرس|جاؤوا من الشرق ودمروا بغداد
+من مؤسس الدولة الأموية؟|معاوية بن أبي سفيان|عبد الملك بن مروان|عمر بن عبد العزيز|يزيد بن معاوية|كان واليًا على الشام`,
+extreme: `من آخر خليفة عباسي في بغداد؟|المستعصم بالله|المعتصم بالله|المستنصر بالله|الناصر لدين الله|قُتل على يد المغول
+ما الاتفاقية التي قسمت المشرق العربي بين بريطانيا وفرنسا عام 1916؟|سايكس بيكو|فرساي|لوزان|سيفر|اسم دبلوماسيَّين
+من القائد القرطاجي الذي عبر جبال الألب بالفيلة؟|هانيبال|هملقار|سكيبيو|يوغرطة|عدو روما الأشهر
+في أي عام تأسست جامعة الدول العربية؟|1945|1948|1950|1952|نفس عام نهاية الحرب العالمية الثانية
+في أي عام تأسست الدولة العثمانية؟|1299|1453|1258|1326|نهاية القرن الثالث عشر`,
+},
+foot: {
+easy: `كم عدد لاعبي الفريق داخل الملعب؟|11|10|9|12|أكثر من 10
+من فاز بكأس العالم 2022؟|الأرجنتين|فرنسا|البرازيل|كرواتيا|منتخب ميسي
+أين أقيمت كأس العالم 2022؟|قطر|روسيا|السعودية|الإمارات|أول مونديال عربي
+كم مدة المباراة الأصلية؟|90 دقيقة|80 دقيقة|100 دقيقة|120 دقيقة|شوطان كل منهما 45
+ما لون البطاقة التي تعني الطرد؟|الحمراء|الصفراء|الزرقاء|الخضراء|لون الخطر`,
+common: `أي منتخب فاز بأكبر عدد من كؤوس العالم؟|البرازيل|ألمانيا|إيطاليا|الأرجنتين|منتخب السامبا
+أي نادٍ فاز بأكبر عدد من ألقاب دوري أبطال أوروبا؟|ريال مدريد|ميلان|برشلونة|ليفربول|النادي الملكي
+من فاز بأول كأس عالم عام 1930؟|الأوروغواي|البرازيل|الأرجنتين|إيطاليا|البلد المستضيف نفسه
+أين أقيمت كأس العالم 2014؟|البرازيل|ألمانيا|جنوب أفريقيا|روسيا|بلد الماراكانا
+ما لقب منتخب المغرب؟|أسود الأطلس|نسور قرطاج|الفراعنة|محاربو الصحراء|حيوان وجبال`,
+hard: `أول منتخب عربي وأفريقي يصل لنصف نهائي كأس العالم؟|المغرب|السعودية|تونس|الجزائر|في مونديال 2022
+في أي عام فازت السعودية على الأرجنتين في كأس العالم؟|2022|2018|1994|2014|نفس عام فوز الأرجنتين باللقب
+من فاز بكأس العالم 2010؟|إسبانيا|هولندا|ألمانيا|إيطاليا|منتخب التيكي تاكا
+أي نادٍ يُلقب بالسيدة العجوز؟|يوفنتوس|ميلان|إنتر ميلان|روما|من تورينو
+ما أكثر منتخب فوزًا بكأس أمم أفريقيا؟|مصر|الكاميرون|غانا|نيجيريا|منتخب عربي`,
+extreme: `من سجّل هدف القرن في كأس العالم 1986؟|مارادونا|بيليه|بلاتيني|زيكو|ضد إنجلترا
+أي دولة استضافت كأس العالم 1966 وفازت بها؟|إنجلترا|ألمانيا الغربية|إيطاليا|البرازيل|مهد كرة القدم
+كم مرة فازت إيطاليا بكأس العالم؟|4|3|5|2|نفس عدد ألمانيا
+من مدرب إسبانيا الفائز بكأس العالم 2010؟|فيسنتي ديل بوسكي|لويس أراغونيس|جولين لوبيتيغي|بيب غوارديولا|درّب ريال مدريد سابقًا
+في أي عام تأسس الاتحاد الدولي لكرة القدم (فيفا)؟|1904|1930|1920|1898|بداية القرن العشرين`,
+},
+maps: {
+easy: `أي دولة شكلها يشبه الحذاء على الخريطة؟|إيطاليا|إسبانيا|اليونان|البرتغال|في البحر المتوسط
+أي دولة تقع جنوب مصر مباشرة؟|السودان|ليبيا|تشاد|إثيوبيا|يمر بها النيل
+أي دولة هي قارة وجزيرة في نفس الوقت؟|أستراليا|اليابان|نيوزيلندا|مدغشقر|بلد الكنغر
+أي بحر يفصل بين السعودية ومصر؟|البحر الأحمر|البحر المتوسط|البحر العربي|البحر الميت|اسمه لون
+أي دولة تقع شمال الولايات المتحدة؟|كندا|المكسيك|روسيا|كوبا|علمها فيه ورقة شجر`,
+common: `أي مضيق يفصل بين أوروبا وأفريقيا؟|جبل طارق|البوسفور|هرمز|باب المندب|سُمّي على اسم قائد
+مضيق هرمز يقع بين إيران و؟|عُمان|الإمارات|قطر|البحرين|سلطنة
+في أي دولة تقع جبال الأطلس بشكل رئيسي؟|المغرب|مصر|السودان|ليبيا|في المغرب العربي
+ما أكبر دولة في أفريقيا مساحة؟|الجزائر|السودان|الكونغو الديمقراطية|ليبيا|بلد المليون شهيد
+أي دولة يمر بها خط الاستواء؟|كينيا|مصر|نيجيريا|جنوب أفريقيا|في شرق أفريقيا`,
+hard: `ما الدولة المحاطة بالكامل بجنوب أفريقيا؟|ليسوتو|إسواتيني|بوتسوانا|زيمبابوي|مملكة جبلية
+مضيق باب المندب يفصل بين اليمن و؟|جيبوتي|الصومال|السودان|عُمان|دولة صغيرة في القرن الأفريقي
+كم عدد الدول التي تحد السعودية برًا؟|7|6|8|9|عدد أيام الأسبوع
+أي هذه الدول تطل على بحر قزوين؟|أذربيجان|أرمينيا|جورجيا|أوزبكستان|عاصمتها باكو
+أي هذه الدول حبيسة بلا سواحل؟|تشاد|السودان|ليبيا|الجزائر|بحيرة باسمها`,
+extreme: `أي دولة حبيسة ومحاطة كلها بدول حبيسة؟|أوزبكستان|كازاخستان|منغوليا|أفغانستان|عاصمتها طشقند
+أي دولة يمر بها خط الاستواء ومدار الجدي معًا؟|البرازيل|الإكوادور|كولومبيا|البيرو|أكبر دولة في قارتها
+بحر آرال المتقلص يقع بين كازاخستان و؟|أوزبكستان|تركمانستان|قيرغيزستان|طاجيكستان|عاصمتها طشقند
+ما أقرب دولة أفريقية إلى أوروبا؟|المغرب|تونس|ليبيا|مصر|يفصلها عنها 14 كم فقط
+أي دولة تتكون من أكثر من 17 ألف جزيرة؟|إندونيسيا|الفلبين|اليابان|ماليزيا|عاصمتها جاكرتا`,
+},
+sci: {
+easy: `ما الكوكب الأقرب إلى الشمس؟|عطارد|الزهرة|المريخ|الأرض|أصغر الكواكب
+ما الصيغة الكيميائية للماء؟|H2O|CO2|O2|NaCl|هيدروجين وأكسجين
+ما الغاز الذي يمتصه النبات في البناء الضوئي؟|ثاني أكسيد الكربون|الأكسجين|النيتروجين|الهيليوم|نخرجه نحن مع الزفير
+عند كم درجة مئوية يغلي الماء عند سطح البحر؟|100|90|80|120|رقم مكوّن من 3 خانات
+ما أكبر كوكب في المجموعة الشمسية؟|المشتري|زحل|الأرض|نبتون|فيه البقعة الحمراء العظيمة`,
+common: `ما الرمز الكيميائي للذهب؟|Au|Ag|Go|Gd|من الكلمة اللاتينية Aurum
+كم عدد كواكب المجموعة الشمسية؟|8|9|7|10|بعد استبعاد بلوتو
+كم تبلغ سرعة الضوء تقريبًا؟|300 ألف كم/ث|150 ألف كم/ث|30 ألف كم/ث|مليون كم/ث|ثلث مليون تقريبًا
+من صاحب النظرية النسبية؟|أينشتاين|نيوتن|هوكينغ|تسلا|E=mc²
+أي كوكب يُلقب بالكوكب الأحمر؟|المريخ|الزهرة|المشتري|عطارد|الرابع من الشمس`,
+hard: `ما العدد الذري للكربون؟|6|12|8|14|نصف كتلته الذرية
+ما أكثر غاز في الغلاف الجوي للأرض؟|النيتروجين|الأكسجين|الأرجون|ثاني أكسيد الكربون|حوالي 78%
+ما وحدة قياس القوة؟|نيوتن|جول|واط|باسكال|اسم عالم الجاذبية
+ما الرمز الكيميائي للصوديوم؟|Na|So|Sd|S|من الاسم اللاتيني Natrium
+كم عدد الكروموسومات في الخلية البشرية الجسدية؟|46|23|44|48|23 زوجًا`,
+extreme: `ما العنصر الأكثر وفرة في الكون؟|الهيدروجين|الهيليوم|الأكسجين|الكربون|العدد الذري 1
+ما وحدة قياس كثافة الفيض المغناطيسي؟|تسلا|ويبر|هنري|فاراد|اسم شركة سيارات أيضًا
+ما قيمة عدد أفوجادرو تقريبًا؟|6.022×10²³|3×10⁸|6.67×10⁻¹¹|1.6×10⁻¹⁹|أس موجب كبير
+ما أكبر قمر في المجموعة الشمسية؟|غانيميد|تيتان|قمر الأرض|أوروبا|يدور حول المشتري
+ما العنصر الذي رمزه W؟|التنغستن|الفاناديوم|الزينون|الإيتريوم|يُصنع منه فتيل المصابيح`,
+},
+gen: {
+easy: `كم عدد أيام السنة الكبيسة؟|366|365|364|360|يوم زيادة
+ما عملة اليابان؟|الين|اليوان|الوون|الروبية|حرفان فقط
+كم عدد ألوان قوس قزح؟|7|6|5|8|عدد أيام الأسبوع
+ما الحيوان الملقب بسفينة الصحراء؟|الجمل|الحصان|الفيل|الحمار|يخزن الدهون في سنامه
+كم عدد قارات العالم؟|7|5|6|8|عدد فردي`,
+common: `من مؤلف رواية "البؤساء"؟|فيكتور هوغو|تولستوي|تشارلز ديكنز|دوستويفسكي|كاتب فرنسي
+من رسم لوحة الموناليزا؟|ليوناردو دافنشي|مايكل أنجلو|فان غوخ|بيكاسو|فنان إيطالي ومخترع
+ما أسرع حيوان بري؟|الفهد|الأسد|الغزال|الحصان|من فصيلة القطط
+ما اللغة الرسمية في البرازيل؟|البرتغالية|الإسبانية|الإنجليزية|الفرنسية|ليست الإسبانية
+من الملقب بأمير الشعراء؟|أحمد شوقي|المتنبي|حافظ إبراهيم|نزار قباني|شاعر مصري`,
+hard: `من صاحب "المقدمة" المؤسس لعلم الاجتماع؟|ابن خلدون|ابن رشد|الفارابي|الغزالي|مؤرخ تونسي
+كم عدد مفاتيح البيانو القياسي؟|88|76|96|64|رقمان متشابهان
+من مؤلف "الثلاثية" (بين القصرين)؟|نجيب محفوظ|طه حسين|توفيق الحكيم|يوسف إدريس|حائز على نوبل
+ما عملة سويسرا؟|الفرنك|اليورو|الكرونة|الجنيه|ليست اليورو
+من مخترع الهاتف؟|غراهام بيل|توماس إديسون|نيكولا تسلا|ماركوني|اسمه يعني الجرس`,
+extreme: `من صاحب المعلقة التي مطلعها "قفا نبكِ من ذكرى حبيب ومنزل"؟|امرؤ القيس|عنترة بن شداد|زهير بن أبي سلمى|طرفة بن العبد|الملك الضليل
+ما اسم الجائزة الكبرى في مهرجان كان السينمائي؟|السعفة الذهبية|الدب الذهبي|الأسد الذهبي|الأوسكار|نخلة
+كم عدد سيمفونيات بيتهوفن المكتملة؟|9|5|7|12|أكبر رقم من خانة واحدة
+من ترجم "كليلة ودمنة" إلى العربية؟|ابن المقفع|الجاحظ|أبو الفرج الأصفهاني|ابن قتيبة|كاتب فارسي الأصل
+أول عربي فاز بجائزة نوبل في الأدب؟|نجيب محفوظ|طه حسين|أدونيس|محمود درويش|عام 1988`,
+},
+};
+const BANK = {};
+for (const c in RAW) { BANK[c] = {}; for (const d in RAW[c])
+  BANK[c][d] = RAW[c][d].trim().split('\n').map((l, i) => { const [q, a, w1, w2, w3, hint] = l.split('|'); return { id: `${c}.${d}.${i}`, q, a, wrong: [w1, w2, w3], hint }; }); }
+
+const $ = id => document.getElementById(id);
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const shuffle = arr => { arr = [...arr]; for (let i = arr.length - 1; i > 0; i--) { const j = rnd(0, i); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
+
+// math questions are generated, so this category never runs out
+function mathQ(diff) {
+  let expr, ans;
+  if (diff === 'easy') {
+    const k = rnd(0, 2), a = rnd(5, 50), b = rnd(5, 50), c = rnd(2, 9), d = rnd(2, 9);
+    [expr, ans] = k === 0 ? [`${a} + ${b}`, a + b] : k === 1 ? [`${a + b} − ${a}`, b] : [`${c} × ${d}`, c * d];
+  } else if (diff === 'common') {
+    const k = rnd(0, 2);
+    if (k === 0) { const a = rnd(11, 25), b = rnd(3, 9); [expr, ans] = [`${a} × ${b}`, a * b]; }
+    else if (k === 1) { const b = rnd(3, 12), q = rnd(4, 15); [expr, ans] = [`${b * q} ÷ ${b}`, q]; }
+    else { const a = rnd(50, 300), b = rnd(50, 300), c = rnd(50, 300); [expr, ans] = [`${a} + ${b} + ${c}`, a + b + c]; }
+  } else if (diff === 'hard') {
+    const k = rnd(0, 2);
+    if (k === 0) { const a = rnd(12, 39), b = rnd(12, 39); [expr, ans] = [`${a} × ${b}`, a * b]; }
+    else if (k === 1) { const p = pick([10, 15, 20, 25, 30, 40, 75]), n = 20 * rnd(2, 40); [expr, ans] = [`${p}% من ${n}`, p * n / 100]; }
+    else { const a = rnd(11, 25); [expr, ans] = [`${a}²`, a * a]; }
+  } else {
+    const k = rnd(0, 2);
+    if (k === 0) { const a = rnd(15, 40); [expr, ans] = [`√${a * a}`, a]; }
+    else if (k === 1) { const a = rnd(12, 30), b = rnd(12, 30), c = rnd(3, 9), d = rnd(11, 40); [expr, ans] = [`${a} × ${b} − ${c} × ${d}`, a * b - c * d]; }
+    else { const k2 = rnd(8, 13); [expr, ans] = [`2^${k2}`, 2 ** k2]; }
+  }
+  const step = Math.max(1, Math.round(Math.abs(ans) * 0.05));
+  const wrong = new Set();
+  for (const d of shuffle([1, -1, 2, -2, 10, -10, step, -step, 2 * step, -2 * step])) {
+    if (wrong.size === 3) break;
+    if (d && ans + d !== ans) wrong.add(ans + d);
+  }
+  return { id: 'math', math: true, q: `كم ناتج: <span class="ltr">${expr}</span> ؟`, a: String(ans), wrong: [...wrong].map(String), hint: `آخر رقم في الإجابة: ${String(Math.abs(ans)).slice(-1)}` };
+}
+
+// ---------- setup ----------
+$('cats').innerHTML = Object.entries(CATS).map(([k, v]) => `<label class="chip"><input type="checkbox" name="cat" value="${k}" checked><span>${v}</span></label>`).join('');
+$('diffs').innerHTML = Object.entries({ ...DIFFS, random: 'عشوائي' }).map(([k, v], i) => `<label class="chip"><input type="radio" name="diff" value="${k}" ${k === 'random' ? 'checked' : ''}><span>${v}</span></label>`).join('');
+
+function syncNames() {
+  const solo = document.querySelector('[name=mode]:checked').value === 'solo';
+  $('countLbl').textContent = solo ? 'عدد اللاعبين' : 'عدد الفرق';
+  $('perLbl').textContent = solo ? 'لاعب' : 'فريق';
+  const n = Math.min(8, Math.max(1, +$('count').value || 1));
+  const old = [...$('names').querySelectorAll('input')].map(i => i.value);
+  $('names').innerHTML = Array.from({ length: n }, (_, i) =>
+    `<input type="text" id="name${i}" value="${old[i] ?? (solo ? 'لاعب ' : 'فريق ') + (i + 1)}" aria-label="الاسم ${i + 1}">`).join('');
+}
+document.querySelectorAll('[name=mode]').forEach(r => r.onchange = syncNames);
+$('count').oninput = syncNames;
+syncNames();
+
+let cfg, G;
+
+$('start').onclick = () => {
+  const cats = [...document.querySelectorAll('[name=cat]:checked')].map(c => c.value);
+  if (!cats.length) return $('setupErr').textContent = 'اختر فئة واحدة على الأقل.';
+  const names = [...$('names').querySelectorAll('input')].map((i, n) => i.value.trim() || `فريق ${n + 1}`);
+  cfg = {
+    cats, names,
+    diff: document.querySelector('[name=diff]:checked').value,
+    per: Math.min(30, Math.max(1, +$('per').value || 5)),
+  };
+  $('setupErr').textContent = '';
+  newGame();
+};
+
+// ---------- game ----------
+function newGame() {
+  G = {
+    round: 0, turn: 0, used: new Set(), peek: false,
+    teams: cfg.names.map(name => ({ name, score: 0, fx: Object.fromEntries(Object.keys(FX).map(k => [k, true])) })),
+  };
+  $('setup').hidden = true; $('end').hidden = true; $('play').hidden = false;
+  nextRound();
+}
+
+const left = (cat, diff) => cat === 'math' ? Infinity : BANK[cat][diff].filter(q => !G.used.has(q.id)).length;
+
+// every team in a round gets the same category + difficulty
+function nextRound() {
+  if (G.round >= cfg.per) return finish();
+  const diffs = cfg.diff === 'random' ? Object.keys(DIFFS) : [cfg.diff];
+  const specs = cfg.cats.flatMap(cat => diffs.map(diff => ({ cat, diff })));
+  const ok = specs.filter(s => left(s.cat, s.diff) >= G.teams.length);
+  if (!ok.length) return finish('انتهت الأسئلة المتاحة لهذه الإعدادات');
+  G.spec = pick(ok);
+  G.round++; G.turn = 0;
+  startTurn();
+}
+
+function draw() {
+  const { cat, diff } = G.spec;
+  if (cat === 'math') return mathQ(diff);
+  const pool = BANK[cat][diff].filter(q => !G.used.has(q.id));
+  if (!pool.length) return null;
+  const q = pick(pool); G.used.add(q.id); return q;
+}
+
+function startTurn(q = draw()) {
+  G.q = q; G.done = false; G.double = false; G.cut = false; G.cutSet = null; G.hintOn = false; G.verdict = null;
+  G.opts = shuffle([G.q.a, ...G.q.wrong]);
+  G.time = SECS[G.spec.diff];
+  clearInterval(G.tick);
+  G.tick = setInterval(() => { if (G.time > 0 && !G.done) { G.time--; renderTimer(); } }, 1000);
+  render();
+}
+
+function answer(choice) {
+  if (G.done) return;
+  G.done = true;
+  const ok = choice === G.q.a, team = G.teams[G.turn];
+  const pts = PTS[G.spec.diff] * (G.double ? 2 : 1);
+  if (ok) team.score += pts;
+  G.verdict = choice == null ? ['bad', 'لم يجب. الإجابة: ' + G.q.a] : ok ? ['good', `صح! +${pts}`] : ['bad', 'خطأ. الإجابة: ' + G.q.a];
+  G.chosen = choice;
+  render();
+}
+
+function useFx(k) {
+  const team = G.teams[G.turn];
+  if (!team.fx[k] || G.done) return;
+  if (k === 'swap') {
+    const q = draw();
+    if (!q) return G.verdict = ['bad', 'لا يوجد سؤال بديل بنفس الفئة والصعوبة'], render();
+    team.fx.swap = false;
+    const dbl = G.double;
+    startTurn(q);
+    G.double = dbl;
+    return render();
+  }
+  team.fx[k] = false;
+  if (k === 'cut') G.cut = true;
+  if (k === 'hint') G.hintOn = true;
+  if (k === 'time') G.time += 30;
+  if (k === 'double') G.double = true;
+  render();
+}
+
+function next() {
+  G.verdict = null; G.chosen = undefined;
+  if (++G.turn < G.teams.length) startTurn(); else nextRound();
+}
+
+function finish(msg) {
+  clearInterval(G.tick);
+  $('play').hidden = true; $('end').hidden = false;
+  const ranked = [...G.teams].sort((a, b) => b.score - a.score);
+  const tie = ranked.length > 1 && ranked[0].score === ranked[1].score;
+  $('endTitle').textContent = msg || (ranked.length === 1 ? 'النتيجة النهائية' : tie ? 'تعادل على الصدارة!' : `الفائز: ${ranked[0].name} 🏆`);
+  $('rank').innerHTML = ranked.map(t => `<li><span>${esc(t.name)}</span><b>${t.score}</b></li>`).join('');
+}
+
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function renderTimer() {
+  $('timer').textContent = G.time;
+  $('timer').classList.toggle('low', G.time <= 5);
+}
+
+function render() {
+  const team = G.teams[G.turn];
+  $('board').innerHTML = G.teams.map((t, i) => `<div class="team ${i === G.turn ? 'on' : ''}"><b>${esc(t.name)}</b><span class="pts">${t.score}</span><div class="fxleft">مؤثرات متبقية: ${Object.values(t.fx).filter(Boolean).length}/5</div></div>`).join('');
+  $('roundTag').textContent = `الجولة ${G.round} من ${cfg.per}`;
+  $('catTag').textContent = CATS[G.spec.cat];
+  $('diffTag').textContent = `${DIFFS[G.spec.diff]} · ${PTS[G.spec.diff] * (G.double ? 2 : 1)} نقاط`;
+  $('turnName').textContent = team.name + (G.double ? ' (دبل ×2)' : '');
+  $('qtext').innerHTML = G.q.math ? G.q.q : esc(G.q.q);
+
+  // the two wrong options removed by "cut" are fixed per question
+  if (G.cut && !G.cutSet) G.cutSet = new Set(shuffle(G.q.wrong).slice(0, 2));
+  $('opts').innerHTML = G.opts.map((o, i) => {
+    let cls = '';
+    if (G.done) cls = o === G.q.a ? 'right' : o === G.chosen ? 'wrong' : '';
+    else if (G.peek && o === G.q.a) cls = 'peek';
+    if (!G.done && G.cutSet?.has(o)) cls += ' gone';
+    return `<button class="${cls}" data-i="${i}" ${G.done ? 'disabled' : ''}><i>${'أبجد'[i]}</i><span>${G.q.math ? `<span class="ltr">${o}</span>` : esc(o)}</span></button>`;
+  }).join('');
+  $('opts').querySelectorAll('button').forEach(b => b.onclick = () => answer(G.opts[b.dataset.i]));
+
+  $('hint').hidden = !G.hintOn;
+  $('hint').textContent = '💡 ' + G.q.hint;
+
+  $('fx').innerHTML = Object.entries(FX).map(([k, v]) =>
+    `<button data-k="${k}" class="${(k === 'double' && G.double) ? 'armed' : ''}" ${!team.fx[k] || G.done ? 'disabled' : ''}>${v}</button>`).join('');
+  $('fx').querySelectorAll('button').forEach(b => b.onclick = () => useFx(b.dataset.k));
+
+  $('peekBtn').textContent = G.peek ? 'إخفاء الإجابة' : 'إظهار الإجابة لي';
+  $('noAns').disabled = G.done;
+  $('next').disabled = !G.done;
+  $('next').textContent = G.turn < G.teams.length - 1 ? 'الفريق التالي' : G.round < cfg.per ? 'الجولة التالية' : 'النتيجة';
+  $('verdict').className = G.verdict?.[0] || '';
+  $('verdict').textContent = G.verdict?.[1] || '';
+  renderTimer();
+}
+
+$('peekBtn').onclick = () => { G.peek = !G.peek; render(); };
+$('noAns').onclick = () => answer(null);
+$('next').onclick = next;
+$('quit').onclick = () => finish();
+$('again').onclick = newGame;
+$('reset').onclick = () => { $('end').hidden = true; $('setup').hidden = false; };
+</script>
